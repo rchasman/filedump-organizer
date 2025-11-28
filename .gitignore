@@ -1,0 +1,4 @@
+*.log
+*.log.old
+.hashes
+.extract_tmp/
