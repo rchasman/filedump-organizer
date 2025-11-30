@@ -56,22 +56,18 @@ AI-powered file organization for macOS. Automatically deduplicates, categorizes,
 
 ## Auto-Run Setup (Folder Action)
 
-1. Open **Automator** (Cmd+Space → "Automator")
-2. Create new **Folder Action**
-3. Set folder to **Downloads**
-4. Add **Run Shell Script** action:
-   - Shell: `/bin/bash`
-   - Pass input: `as arguments`
-   - Code:
-     ```bash
-     sleep 5
-     ~/Downloads/.organize/ai-organize.sh true 5
-     ```
-5. Save as "Organize Downloads"
+1. Compile the script:
+   ```bash
+   mkdir -p ~/Library/Scripts/Folder\ Action\ Scripts
+   osacompile -o ~/Library/Scripts/Folder\ Action\ Scripts/organize-downloads.scpt organize-downloads.applescript
+   ```
 
-Enable Folder Actions:
+2. Open **Folder Actions Setup** (Cmd+Space → "Folder Actions Setup")
+3. Enable Folder Actions (checkbox at top)
+4. Click **+** to add Downloads folder
+5. Choose **organize-downloads.scpt** from the list
+
+Enable Folder Actions via CLI:
 ```bash
 osascript -e 'tell application "System Events" to set folder actions enabled to true'
 ```
-
-To disable: Delete `~/Library/Workflows/Applications/Folder Actions/Organize Downloads.workflow`
