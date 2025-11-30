@@ -283,47 +283,6 @@ organize_files() {
     echo "$files_moved"
 }
 
-# Dedupe files across all organized folders
-deduplicate_all_folders() {
-    local files_trashed=0
-    > "$HASH_FILE"
-
-    for folder in $FOLDERS; do
-        local folder_path="$DOWNLOADS_DIR/$folder"
-        [[ -d "$folder_path" ]] || continue
-
-        while IFS= read -r -d '' file; do
-            [[ -f "$file" ]] || continue
-            local filename
-            filename=$(basename "$file")
-            [[ "$filename" == .* ]] && continue
-
-            local hash
-            hash=$(md5 -q "$file" 2>/dev/null) || continue
-            local mtime
-            mtime=$(stat -f '%m' "$file")
-            echo "$hash|$mtime|$file" >> "$HASH_FILE"
-        done < <(find "$folder_path" -maxdepth 1 -type f -print0 2>/dev/null)
-    done
-
-    local prev_hash=""
-    while IFS='|' read -r hash mtime filepath; do
-        if [[ "$hash" == "$prev_hash" ]] && [[ -n "$prev_hash" ]]; then
-            if [[ -f "$filepath" ]]; then
-                mv "$filepath" "$TRASH_DIR/" 2>/dev/null && {
-                    log "  Trashed dupe: $(basename "$filepath")"
-                    ((files_trashed++)) || true
-                }
-            fi
-        else
-            prev_hash="$hash"
-        fi
-    done < <(sort -t'|' -k1,1 -k2,2rn "$HASH_FILE")
-
-    rm -f "$HASH_FILE"
-    echo "$files_trashed"
-}
-
 # Check if filename is generic (for AI renaming)
 is_generic_name() {
     local name="$1"
@@ -469,15 +428,22 @@ ai_rename_files() {
     echo "$renamed"
 }
 
-# Extract and organize zip contents
-extract_and_organize_zips() {
+# Extract zips to Downloads root (before organizing)
+extract_zips() {
     local extracted=0
     local limit="${1:-5}"
     local max_zip_size=$((100 * 1024 * 1024))  # 100MB max
 
-    for zipfile in "$DOWNLOADS_DIR/Code"/*.zip; do
+    while IFS= read -r -d '' zipfile; do
         [[ -f "$zipfile" ]] || continue
         [[ $extracted -ge $limit ]] && break
+
+        local filename
+        filename=$(basename "$zipfile")
+        [[ "$filename" == .* ]] && continue
+
+        # Only process .zip files
+        [[ "${filename##*.}" == "zip" ]] || continue
 
         # Skip large zips
         local zip_size
@@ -503,38 +469,42 @@ extract_and_organize_zips() {
 
         log "  Extracting: $zipname.zip"
 
-        # Move extracted files to appropriate folders
+        # Move extracted files to Downloads root
         local file_count=0
         while IFS= read -r -d '' file; do
             [[ -f "$file" ]] || continue
-            local filename
-            filename=$(basename "$file")
-            [[ "$filename" == .* ]] && continue
-            [[ "$filename" == "__MACOSX" ]] && continue
+            local extracted_filename
+            extracted_filename=$(basename "$file")
+            [[ "$extracted_filename" == .* ]] && continue
+            [[ "$extracted_filename" == "__MACOSX" ]] && continue
 
-            local ext
-            ext=$(get_extension "$filename")
-            local category
-            category=$(extension_categorize "$ext")
+            local target="$DOWNLOADS_DIR/$extracted_filename"
+            # Add counter if file exists
+            local counter=2
+            while [[ -e "$target" ]]; do
+                local base="${extracted_filename%.*}"
+                local ext="${extracted_filename##*.}"
+                if [[ "$base" == "$ext" ]]; then
+                    target="$DOWNLOADS_DIR/${extracted_filename}-${counter}"
+                else
+                    target="$DOWNLOADS_DIR/${base}-${counter}.${ext}"
+                fi
+                ((counter++))
+            done
 
-            local new_basename
-            new_basename=$(to_kebab_case "$(get_basename_no_ext "$filename")")
-            local target_path
-            target_path=$(get_unique_path "$DOWNLOADS_DIR/$category" "$new_basename" "$ext")
-
-            mv "$file" "$target_path" 2>/dev/null && ((file_count++)) || true
+            mv "$file" "$target" 2>/dev/null && ((file_count++)) || true
         done < <(find "$extract_dir" -type f -print0 2>/dev/null)
 
         # Cleanup
         rm -rf "$extract_dir"
 
         if [[ $file_count -gt 0 ]]; then
-            log "    -> $file_count files extracted and organized"
+            log "    -> $file_count files extracted to Downloads"
             # Trash the original zip after successful extraction
             mv "$zipfile" "$TRASH_DIR/" 2>/dev/null || true
             ((extracted++))
         fi
-    done
+    done < <(find "$DOWNLOADS_DIR" -maxdepth 1 -type f -print0 2>/dev/null)
 
     echo "$extracted"
 }
@@ -555,28 +525,23 @@ main() {
     rotate_log
     create_folders
 
-    # Step 1: Dedupe
-    local dupes=0
+    # Step 1: Extract zips to Downloads root
+    local zips_extracted
+    zips_extracted=$(extract_zips 5)
+
+    # Step 2: Dedupe (catches original files + extracted zip contents)
+    local dupes
     dupes=$(deduplicate_files)
 
-    # Step 2: AI rename generic files BEFORE organizing (if models available)
+    # Step 3: AI rename generic files BEFORE organizing (if models available)
     local renamed=0
     if [[ "$use_ai" == "true" ]] && [[ -n "$has_text_model" || -n "$has_vision_model" ]]; then
         renamed=$(ai_rename_files "$rename_limit")
     fi
 
-    # Step 3: Organize/move files (with AI-renamed names)
+    # Step 4: Organize/move files (with AI-renamed names)
     local moved
     moved=$(organize_files "$use_ai")
-
-    # Step 4: Extract zips and organize contents
-    local zips_extracted
-    zips_extracted=$(extract_and_organize_zips 5)
-
-    # Step 5: Dedupe again after zip extraction
-    local dupes2=0
-    dupes2=$(deduplicate_all_folders)
-    dupes=$((dupes + dupes2))
 
     log "Done: $moved organized, $dupes dupes, $zips_extracted zips, $renamed renamed"
     echo "Done: $moved organized, $dupes dupes, $zips_extracted zips, $renamed AI-renamed"

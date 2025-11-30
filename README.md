@@ -4,12 +4,12 @@ AI-powered file organization for macOS. Automatically deduplicates, categorizes,
 
 ## Features
 
+- **Zip Extraction** - Auto-extracts archives to Downloads root (before organizing)
 - **Deduplication** - Trashes files with identical md5 hashes (keeps newest)
-- **Smart Categorization** - Moves files to typed folders (Invoices/, Images/, Documents/, etc.)
-- **Kebab-case Renaming** - Normalizes filenames, adds date suffix to invoices
 - **AI Image Renaming** - Uses moondream vision model to name generic images
 - **AI PDF Renaming** - Extracts text + uses llama3.2 to name generic PDFs
-- **Zip Extraction** - Auto-extracts archives and organizes contents
+- **Smart Categorization** - Moves AI-renamed files to typed folders (Invoices/, Images/, Documents/, etc.)
+- **Kebab-case Renaming** - Normalizes filenames, adds date suffix to invoices
 - **Log Rotation** - Auto-rotates logs over 1MB
 
 ## Folder Structure
@@ -47,6 +47,13 @@ AI-powered file organization for macOS. Automatically deduplicates, categorizes,
 ~/Downloads/.organize/ai-organize.sh false
 ```
 
+## Workflow Order
+
+1. **Extract zips** - Unzips archives to Downloads root
+2. **Deduplicate** - Removes duplicate files
+3. **AI rename** - Gives descriptive names to generic files
+4. **Organize** - Moves renamed files to categorized folders
+
 ## Auto-Run Setup (Folder Action)
 
 1. Open **Automator** (Cmd+Space → "Automator")
@@ -61,5 +68,10 @@ AI-powered file organization for macOS. Automatically deduplicates, categorizes,
      ~/Downloads/.organize/ai-organize.sh true 5
      ```
 5. Save as "Organize Downloads"
+
+Enable Folder Actions:
+```bash
+osascript -e 'tell application "System Events" to set folder actions enabled to true'
+```
 
 To disable: Delete `~/Library/Workflows/Applications/Folder Actions/Organize Downloads.workflow`
