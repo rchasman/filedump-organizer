@@ -432,43 +432,39 @@ $text"
     return 1
 }
 
-# AI rename files in organized folders
+# AI rename files in Downloads root (before organizing)
 ai_rename_files() {
     local renamed=0
     local limit="${1:-10}"
 
-    # Rename generic images
-    for file in "$DOWNLOADS_DIR/Images"/*; do
+    while IFS= read -r -d '' file; do
         [[ -f "$file" ]] || continue
+        [[ $renamed -ge $limit ]] && break
+
+        local filename
+        filename=$(basename "$file")
+        [[ "$filename" == .* ]] && continue
+        [[ "$filename" == *.crdownload ]] && continue
+        [[ "$filename" == *.part ]] && continue
+        [[ "$filename" == *.download ]] && continue
+
         local ext="${file##*.}"
         ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+
+        # Try images first
         case "$ext" in
-            png|jpg|jpeg|webp|gif|heic) ;;
-            *) continue ;;
+            png|jpg|jpeg|webp|gif|heic)
+                if ai_rename_image "$file"; then
+                    ((renamed++))
+                fi
+                ;;
+            pdf)
+                if ai_rename_pdf "$file"; then
+                    ((renamed++))
+                fi
+                ;;
         esac
-        if ai_rename_image "$file"; then
-            ((renamed++))
-            [[ $renamed -ge $limit ]] && break
-        fi
-    done
-
-    # Rename generic PDFs (invoices)
-    for file in "$DOWNLOADS_DIR/Invoices"/*.pdf; do
-        [[ -f "$file" ]] || continue
-        if ai_rename_pdf "$file"; then
-            ((renamed++))
-            [[ $renamed -ge $limit ]] && break
-        fi
-    done
-
-    # Rename generic PDFs (documents)
-    for file in "$DOWNLOADS_DIR/Documents"/*.pdf; do
-        [[ -f "$file" ]] || continue
-        if ai_rename_pdf "$file"; then
-            ((renamed++))
-            [[ $renamed -ge $limit ]] && break
-        fi
-    done
+    done < <(find "$DOWNLOADS_DIR" -maxdepth 1 -type f -print0 2>/dev/null)
 
     echo "$renamed"
 }
@@ -563,24 +559,24 @@ main() {
     local dupes=0
     dupes=$(deduplicate_files)
 
-    # Step 2: Organize/move files
-    local moved
-    moved=$(organize_files "$use_ai")
-
-    # Step 3: Extract zips and organize contents
-    local zips_extracted
-    zips_extracted=$(extract_and_organize_zips 5)
-
-    # Step 4: Dedupe again after zip extraction
-    local dupes2=0
-    dupes2=$(deduplicate_all_folders)
-    dupes=$((dupes + dupes2))
-
-    # Step 5: AI rename generic files (if models available)
+    # Step 2: AI rename generic files BEFORE organizing (if models available)
     local renamed=0
     if [[ "$use_ai" == "true" ]] && [[ -n "$has_text_model" || -n "$has_vision_model" ]]; then
         renamed=$(ai_rename_files "$rename_limit")
     fi
+
+    # Step 3: Organize/move files (with AI-renamed names)
+    local moved
+    moved=$(organize_files "$use_ai")
+
+    # Step 4: Extract zips and organize contents
+    local zips_extracted
+    zips_extracted=$(extract_and_organize_zips 5)
+
+    # Step 5: Dedupe again after zip extraction
+    local dupes2=0
+    dupes2=$(deduplicate_all_folders)
+    dupes=$((dupes + dupes2))
 
     log "Done: $moved organized, $dupes dupes, $zips_extracted zips, $renamed renamed"
     echo "Done: $moved organized, $dupes dupes, $zips_extracted zips, $renamed AI-renamed"
