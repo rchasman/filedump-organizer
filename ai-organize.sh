@@ -404,7 +404,7 @@ ai_rename_pdf() {
     fi
 
     local text
-    text=$(pdftotext -l 1 "$filepath" - 2>/dev/null | head -60)
+    text=$(pdftotext -l 1 "$filepath" - 2>/dev/null | head -150)
 
     if [[ -z "$text" ]]; then
         return 1
@@ -439,12 +439,34 @@ $text
 Role should be 1-3 words (e.g., frontend-developer, senior-engineer, product-manager, data-scientist)
 Reply with ONLY the formatted name (e.g., john-doe-frontend-developer-resume), nothing else."
     elif [[ "$is_invoice" == "true" ]]; then
-        prompt="Extract from this invoice: company name and service/product. Format as: company-service
+        prompt="From this invoice, extract:
+1. VENDOR: Short canonical company name (not full legal name)
+2. DATE: The invoice ISSUE date (labeled 'Date of issue', 'Invoice date', or 'Date'). NOT the billing period, NOT the due date.
+
+Common vendor mappings:
+- Amazon Web Services, AWS Inc → aws
+- Stripe, Inc → stripe
+- Google Cloud, Google LLC → google
+- Intercom, Inc → intercom
+- Digital Ocean → digitalocean
+- Heroku → heroku
+- Vercel Inc → vercel
+- Netlify → netlify
+- GitHub → github
+- Cloudflare → cloudflare
+- Apple Inc → apple
+- Microsoft → microsoft
+
+Format: vendor-mon-yy (3-letter month, 2-digit year)
+- mon = jan/feb/mar/apr/may/jun/jul/aug/sep/oct/nov/dec
+- yy = last 2 digits of year (2024 → 24, 2025 → 25)
+
+Examples: aws-jul-25, stripe-dec-24, intercom-nov-24
 
 Text:
 $text
 
-Reply with ONLY the formatted name (e.g., aws-hosting, stripe-subscription), nothing else."
+Reply with ONLY the filename (e.g., intercom-jul-25), nothing else."
     else
         prompt="Based on this document, generate a descriptive filename (3-6 words). Include company/source if identifiable.
 
@@ -463,16 +485,16 @@ Reply with ONLY the filename words, nothing else."
     fi
 
     local name_kebab
-    name_kebab=$(to_kebab_case "$new_name" | cut -c1-60)
-
-    # Add date for invoices
     if [[ "$is_invoice" == "true" ]]; then
-        local date_suffix
-        date_suffix=$(extract_date_from_name "$filename")
-        if [[ -z "$date_suffix" ]]; then
-            date_suffix=$(stat -f '%Sm' -t '%b-%y' "$filepath" | tr '[:upper:]' '[:lower:]')
+        # Invoice: AI returns vendor-mon-yy format directly, just clean and validate
+        name_kebab=$(echo "$new_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
+        # Validate invoice format: word-mon-yy (e.g., intercom-jul-25)
+        if [[ ! "$name_kebab" =~ ^[a-z]+-[a-z]{3}-[0-9]{2}$ ]]; then
+            log "    Invalid invoice format from AI: $name_kebab"
+            return 1
         fi
-        name_kebab="${name_kebab}-${date_suffix}"
+    else
+        name_kebab=$(to_kebab_case "$new_name" | cut -c1-60)
     fi
 
     local target
