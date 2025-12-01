@@ -283,15 +283,75 @@ organize_files() {
     echo "$files_moved"
 }
 
-# Check if filename is generic (for AI renaming)
-is_generic_name() {
+# Standard filename formats:
+# - Resumes: firstname-lastname-role-resume.ext
+# - Invoices: company-service-mon-yy.ext
+# - Images: descriptive-name.ext
+# - Documents: descriptive-name.ext
+
+# Check if filename matches expected format (returns 0 if needs fixing, 1 if OK)
+needs_format_fix() {
     local name="$1"
-    echo "$name" | /usr/bin/grep -qiE '^(image|img|screenshot|photo|picture|pako|dsc|dcim)' && return 0
-    echo "$name" | /usr/bin/grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}' && return 0
-    echo "$name" | /usr/bin/grep -qiE '^gen[-_ ]' && return 0
-    echo "$name" | /usr/bin/grep -qiE '^(receipt|invoice|payment|billing|statement|document|file|scan)[-_][0-9]' && return 0
-    echo "$name" | /usr/bin/grep -qiE '^(download|untitled|new|temp)' && return 0
-    return 1
+    local category="$2"
+
+    if ! command -v ollama &>/dev/null; then
+        return 1  # No AI, can't check
+    fi
+
+    local format_spec=""
+    case "$category" in
+        resume)
+            format_spec="firstname-lastname-role-resume"
+            ;;
+        invoice)
+            format_spec="company-service-mon-yy (e.g., aws-hosting-jan-25)"
+            ;;
+        image)
+            format_spec="descriptive-kebab-case (e.g., sunset-beach-photo)"
+            ;;
+        document)
+            format_spec="descriptive-kebab-case (e.g., project-proposal)"
+            ;;
+        *)
+            return 1  # Unknown category
+            ;;
+    esac
+
+    local prompt="Check if filename '$name' matches format: $format_spec
+
+Reply ONLY with JSON: {\"matches\": true/false, \"reason\": \"explanation\"}
+
+Rules for resume format (firstname-lastname-role-resume):
+- MUST end with \"-resume\" (literally)
+- MUST be EXACTLY 4 hyphen-separated parts: firstname-lastname-role-resume
+- Role should be 1-3 words describing the position (e.g., frontend-developer, senior-engineer, product-manager)
+- \"cv\" is NOT a first name - files starting with \"cv-\" are WRONG
+- NO dates/numbers like \"12-9-25\", \"copy\", \"v2\"
+- NO extra words like \"documentation\", \"business\" after role
+- CORRECT: john-smith-frontend-developer-resume, jane-doe-product-manager-resume, marcus-hugh-senior-frontend-developer-resume
+- WRONG: cv-marcus-hugh, john-smith-resume (missing role), john-smith-senior-resume-copy, mezdef-documentation-resume
+
+Rules for invoice format (company-service-mon-yy):
+- MUST have date at end: mon-yy (e.g. jan-25)
+- Format: company + service + date
+- Examples: aws-hosting-jan-25 ✓, stripe-api-dec-24 ✓
+- BAD: invoice-aws-jan-25 ✗, aws-january-2025 ✗"
+
+    local full_output
+    full_output=$(echo "$prompt" | ollama run "$TEXT_MODEL" 2>/dev/null)
+
+    # Extract matches value directly from output (avoid complex JSON parsing)
+    local matches
+    matches=$(echo "$full_output" | tail -3 | /usr/bin/grep -oE '"matches":\s*(true|false)' | tail -1 | /usr/bin/grep -oE '(true|false)')
+
+    if [[ -z "$matches" ]]; then
+        return 1  # Can't parse, skip
+    fi
+
+    if [[ "$matches" == "false" ]]; then
+        return 0  # Needs fix
+    fi
+    return 1  # Already good format
 }
 
 # AI rename image using vision model
@@ -302,8 +362,8 @@ ai_rename_image() {
     local ext="${filename##*.}"
     local basename_no_ext="${filename%.*}"
 
-    if ! is_generic_name "$basename_no_ext"; then
-        return 1
+    if ! needs_format_fix "$basename_no_ext" "image"; then
+        return 1  # Already good format
     fi
 
     log "  AI renaming image: $filename"
@@ -338,16 +398,10 @@ ai_rename_pdf() {
     filename=$(basename "$filepath")
     local basename_no_ext="${filename%.pdf}"
 
-    if ! is_generic_name "$basename_no_ext"; then
-        return 1
-    fi
-
     # Need pdftotext
     if ! command -v pdftotext &>/dev/null; then
         return 1
     fi
-
-    log "  AI renaming PDF: $filename"
 
     local text
     text=$(pdftotext -l 1 "$filepath" - 2>/dev/null | head -60)
@@ -356,10 +410,49 @@ ai_rename_pdf() {
         return 1
     fi
 
-    local prompt="Based on this document text, generate a short descriptive filename (3-6 words). Include the company/source name if identifiable. Reply with ONLY the filename words, nothing else.
+    # Determine document type from content
+    local is_invoice=false
+    local is_resume=false
+    if echo "$text" | /usr/bin/grep -qiE '(invoice|receipt|statement|billing|amount due|payment)'; then
+        is_invoice=true
+    elif echo "$text" | /usr/bin/grep -qiE '(resume|curriculum vitae|professional experience|work experience|education|skills|objective)'; then
+        is_resume=true
+    fi
+
+    local category="document"
+    [[ "$is_invoice" == "true" ]] && category="invoice"
+    [[ "$is_resume" == "true" ]] && category="resume"
+
+    if ! needs_format_fix "$basename_no_ext" "$category"; then
+        return 1  # Already good format
+    fi
+
+    log "  AI renaming PDF: $filename"
+
+    local prompt
+    if [[ "$is_resume" == "true" ]]; then
+        prompt="Extract from this resume: person's name and their role/title. Format as: firstname-lastname-role-resume
 
 Text:
-$text"
+$text
+
+Role should be 1-3 words (e.g., frontend-developer, senior-engineer, product-manager, data-scientist)
+Reply with ONLY the formatted name (e.g., john-doe-frontend-developer-resume), nothing else."
+    elif [[ "$is_invoice" == "true" ]]; then
+        prompt="Extract from this invoice: company name and service/product. Format as: company-service
+
+Text:
+$text
+
+Reply with ONLY the formatted name (e.g., aws-hosting, stripe-subscription), nothing else."
+    else
+        prompt="Based on this document, generate a descriptive filename (3-6 words). Include company/source if identifiable.
+
+Text:
+$text
+
+Reply with ONLY the filename words, nothing else."
+    fi
 
     local new_name
     new_name=$(echo "$prompt" | ollama run "$TEXT_MODEL" 2>/dev/null | head -1 | tr -d '\n')
@@ -372,8 +465,8 @@ $text"
     local name_kebab
     name_kebab=$(to_kebab_case "$new_name" | cut -c1-60)
 
-    # Add date for invoices/receipts
-    if echo "$new_name" | /usr/bin/grep -qiE '(invoice|receipt|statement|billing)'; then
+    # Add date for invoices
+    if [[ "$is_invoice" == "true" ]]; then
         local date_suffix
         date_suffix=$(extract_date_from_name "$filename")
         if [[ -z "$date_suffix" ]]; then
@@ -384,6 +477,84 @@ $text"
 
     local target
     target=$(get_unique_path "$(dirname "$filepath")" "$name_kebab" "pdf")
+    mv "$filepath" "$target" && {
+        log "    -> $(basename "$target")"
+        return 0
+    }
+    return 1
+}
+
+# AI rename text documents (docx, doc, txt, rtf)
+ai_rename_document() {
+    local filepath="$1"
+    local filename
+    filename=$(basename "$filepath")
+    local ext="${filename##*.}"
+    local basename_no_ext="${filename%.*}"
+
+    local text=""
+    case "$ext" in
+        docx|doc|rtf)
+            # Use textutil on macOS to extract text
+            if command -v textutil &>/dev/null; then
+                text=$(textutil -convert txt -stdout "$filepath" 2>/dev/null | head -100)
+            fi
+            ;;
+        txt|md)
+            text=$(head -100 "$filepath" 2>/dev/null)
+            ;;
+    esac
+
+    if [[ -z "$text" ]]; then
+        return 1
+    fi
+
+    # Determine if it's a resume
+    local is_resume=false
+    if echo "$text" | /usr/bin/grep -qiE '(resume|curriculum vitae|professional experience|work experience|education|skills|objective)'; then
+        is_resume=true
+    fi
+
+    local category="document"
+    [[ "$is_resume" == "true" ]] && category="resume"
+
+    if ! needs_format_fix "$basename_no_ext" "$category"; then
+        return 1  # Already good format
+    fi
+
+    log "  AI renaming document: $filename"
+
+    local prompt
+    if [[ "$is_resume" == "true" ]]; then
+        prompt="Extract from this resume: person's name and their role/title. Format as: firstname-lastname-role-resume
+
+Text:
+$text
+
+Role should be 1-3 words (e.g., frontend-developer, senior-engineer, product-manager, data-scientist)
+Reply with ONLY the formatted name (e.g., john-doe-frontend-developer-resume), nothing else."
+    else
+        prompt="Based on this document, generate a descriptive filename (3-6 words). Include company/source if identifiable.
+
+Text:
+$text
+
+Reply with ONLY the filename words, nothing else."
+    fi
+
+    local new_name
+    new_name=$(echo "$prompt" | ollama run "$TEXT_MODEL" 2>/dev/null | head -1 | tr -d '\n')
+    new_name=$(echo "$new_name" | sed 's/^[^a-zA-Z]*//' | sed "s/\.$ext$//" | sed 's/[^a-zA-Z0-9 -]*$//')
+
+    if [[ -z "$new_name" ]]; then
+        return 1
+    fi
+
+    local name_kebab
+    name_kebab=$(to_kebab_case "$new_name" | cut -c1-60)
+
+    local target
+    target=$(get_unique_path "$(dirname "$filepath")" "$name_kebab" "$ext")
     mv "$filepath" "$target" && {
         log "    -> $(basename "$target")"
         return 0
@@ -410,7 +581,7 @@ ai_rename_files() {
         local ext="${file##*.}"
         ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
 
-        # Try images first
+        # Try all renameable file types
         case "$ext" in
             png|jpg|jpeg|webp|gif|heic)
                 if ai_rename_image "$file"; then
@@ -419,6 +590,11 @@ ai_rename_files() {
                 ;;
             pdf)
                 if ai_rename_pdf "$file"; then
+                    ((renamed++))
+                fi
+                ;;
+            docx|doc|txt|rtf|md)
+                if ai_rename_document "$file"; then
                     ((renamed++))
                 fi
                 ;;
