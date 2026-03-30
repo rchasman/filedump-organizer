@@ -1,6 +1,6 @@
 #!/bin/bash
 # AI-powered file organization using Gemini Flash + liteparse
-# Dedupes, classifies, renames, and organizes files in a single pass
+# Dedupes, classifies, renames, and organizes files in parallel
 
 set -euo pipefail
 
@@ -18,6 +18,7 @@ FOLDERS="Invoices Images Documents Data Code Media Resumes Misc"
 if [[ -z "${GEMINI_API_KEY:-}" ]] && [[ -f "$ORGANIZE_DIR/.env" ]]; then
     source "$ORGANIZE_DIR/.env"
 fi
+export GEMINI_API_KEY
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
@@ -158,8 +159,13 @@ extract_content() {
             fi
             echo "$text"
             ;;
-        txt|md)
+        txt|md|csv|json)
             head -100 "$filepath" 2>/dev/null
+            ;;
+        xlsx|xls)
+            if command -v lit &>/dev/null; then
+                lit parse "$filepath" --target-pages "1" --no-ocr -q 2>/dev/null | head -100
+            fi
             ;;
     esac
 }
@@ -168,28 +174,16 @@ extract_content() {
 # Gemini API
 # ---------------------------------------------------------------------------
 
-CLASSIFY_PROMPT='You are a file organizer. Given a file'"'"'s content, return the best filename and category.
+CLASSIFY_PROMPT='Classify and name this file.
 
-Categories:
-- Invoices: bills, receipts, invoices, statements, subscription charges
-- Images: photos, screenshots, graphics, artwork, diagrams
-- Documents: reports, papers, presentations, manuals, contracts, letters
-- Data: spreadsheets, CSV, JSON, databases
-- Code: source code, archives, installers, packages
-- Media: video, audio files
-- Resumes: CVs, resume documents
-- Misc: anything else
+Categories: Invoices (receipts/bills/statements), Images, Documents, Data (spreadsheets/CSV/JSON), Code (installers/packages/archives), Media, Resumes, Misc
 
-Naming rules:
-- Invoices MUST be: vendor-mon-yy (e.g., stripe-dec-24, aws-jul-25)
-  Extract the ISSUE date (not due date, not billing period).
-  Use short canonical vendor: AWS->aws, Stripe->stripe, Google Cloud->google, Anthropic->anthropic, Intercom->intercom, Vercel->vercel, GitHub->github, Cloudflare->cloudflare, Apple->apple, Microsoft->microsoft, Clerk->clerk, Digital Ocean->digitalocean, Heroku->heroku, Netlify->netlify, Postmark->postmark, Neon->neon, Linear->linear
-- Resumes MUST be: firstname-lastname-role-resume (e.g., john-doe-frontend-developer-resume)
-  Role = 1-3 words (frontend-developer, senior-engineer, data-scientist)
-- Everything else: descriptive-kebab-case, 3-6 words (e.g., quarterly-sales-report)
-  Include company/source if identifiable.
-
-If the current filename already matches these conventions, return it unchanged as "name".'
+Naming:
+- Invoices: vendor-dd-mon-yy (e.g., stripe-15-dec-24, aws-01-jul-25)
+  Short vendor name. Issue date only, not due date.
+  Tricky: Amazon Web Services->aws, Google Cloud->google, Digital Ocean->digitalocean
+- Resumes: firstname-lastname-role-resume (role: 1-3 words)
+- Other: descriptive-kebab-case, 3-6 words'
 
 # Call Gemini with structured JSON output
 # Returns JSON: {"name": "...", "category": "..."}
@@ -197,7 +191,8 @@ gemini_request() {
     local prompt="$1"
     local image_path="${2:-}"
     local mime_type="${3:-}"
-    local tmp_request="$ORGANIZE_DIR/.gemini_request.json"
+    local tmp_request
+    tmp_request=$(mktemp "$ORGANIZE_DIR/.gemini_req_XXXXXX")
 
     if [[ -n "$image_path" ]]; then
         local base64_data
@@ -244,7 +239,7 @@ gemini_request() {
     fi
 
     local response
-    response=$(curl -s --max-time 30 \
+    response=$(curl -s --max-time 15 \
         "$GEMINI_API_URL/$GEMINI_MODEL:generateContent?key=$GEMINI_API_KEY" \
         -H "Content-Type: application/json" \
         -d @"$tmp_request" 2>/dev/null)
@@ -273,7 +268,7 @@ Describe what you see and generate an appropriate filename."
 
             gemini_request "$prompt" "$filepath" "$mime_type"
             ;;
-        pdf|docx|doc|rtf|pptx|ppt|txt|md)
+        pdf|docx|doc|rtf|pptx|ppt|txt|md|csv|json|xlsx|xls)
             local content
             content=$(extract_content "$filepath" "$ext")
 
@@ -299,14 +294,109 @@ $content"
 }
 
 # ---------------------------------------------------------------------------
-# Single-pass pipeline: classify + rename + organize
+# Parallel classify + move pipeline
 # ---------------------------------------------------------------------------
+
+MAX_PARALLEL="${MAX_PARALLEL:-5}"
+COUNTERS_DIR="$ORGANIZE_DIR/.counters"
+
+# Check if a filename already matches a known good format (skip AI)
+# Returns category name via stdout, or empty if not recognized
+already_classified() {
+    local name="$1"
+    local name_lower
+    name_lower=$(echo "$name" | tr '[:upper:]' '[:lower:]')
+    # Invoice: vendor-dd-mon-yy or vendor-mon-yy (with optional -N dedup suffix)
+    if [[ "$name_lower" =~ ^[a-z]+-([0-9]{2}-)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-[0-9]{2}(-[0-9]+)?$ ]]; then
+        echo "Invoices"
+        return 0
+    fi
+    # Resume format
+    if [[ "$name_lower" =~ -resume(-[0-9]+)?$ ]]; then
+        echo "Resumes"
+        return 0
+    fi
+    return 1
+}
+
+# Classify with single retry, then move immediately
+classify_and_move() {
+    local file="$1"
+    local filename
+    filename=$(basename "$file")
+    local ext
+    ext=$(get_extension "$filename")
+    local basename_no_ext
+    basename_no_ext=$(get_basename_no_ext "$filename")
+
+    local new_name="" category=""
+
+    # AI classification: try twice
+    local attempt=0
+    while [[ $attempt -lt 2 ]]; do
+        local result
+        result=$(classify_file "$file" "$filename" "$ext" 2>/dev/null) || true
+
+        if [[ -n "$result" ]]; then
+            new_name=$(echo "$result" | jq -r '.name // empty' 2>/dev/null)
+            category=$(echo "$result" | jq -r '.category // empty' 2>/dev/null)
+
+            case "${category:-}" in
+                Invoices|Images|Documents|Data|Code|Media|Resumes|Misc) break ;;
+                *) new_name=""; category="" ;;
+            esac
+        fi
+
+        ((attempt++))
+    done
+
+    if [[ -z "$category" ]]; then
+        log "    AI failed after $attempt attempts: $filename"
+        category=$(extension_categorize "$ext")
+    fi
+
+    # Clean up AI-generated name
+    if [[ -n "$new_name" ]]; then
+        if [[ "$category" == "Invoices" ]]; then
+            new_name=$(echo "$new_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
+            if [[ ! "$new_name" =~ ^[a-z]+-[0-9]{2}-[a-z]{3}-[0-9]{2}$ ]]; then
+                log "    Invalid invoice format from AI: $new_name (file: $filename)"
+                new_name=""
+            fi
+        else
+            new_name=$(to_kebab_case "$new_name" | cut -c1-60)
+        fi
+    fi
+
+    if [[ -z "$new_name" ]]; then
+        new_name=$(to_kebab_case "$basename_no_ext")
+    fi
+
+    # Move to target folder
+    local target_dir="$DOWNLOADS_DIR/$category"
+    local target_path
+    target_path=$(get_unique_path "$target_dir" "$new_name" "$ext")
+    local original_kebab
+    original_kebab=$(to_kebab_case "$basename_no_ext")
+
+    mv "$file" "$target_path" 2>/dev/null && {
+        if [[ "$new_name" != "$original_kebab" ]]; then
+            log "  $filename -> $category/$(basename "$target_path")"
+            touch "$COUNTERS_DIR/renamed_$(date +%s%N)" 2>/dev/null
+        else
+            log "  $filename -> $category/"
+        fi
+        touch "$COUNTERS_DIR/moved_$(date +%s%N)" 2>/dev/null
+    }
+}
 
 process_files() {
     local ai_limit="${1:-10}"
-    local moved=0
-    local renamed=0
     local ai_calls=0
+    local jobs_running=0
+
+    rm -rf "$COUNTERS_DIR"
+    mkdir -p "$COUNTERS_DIR"
 
     while IFS= read -r -d '' file; do
         [[ -f "$file" ]] || continue
@@ -320,70 +410,63 @@ process_files() {
 
         local ext
         ext=$(get_extension "$filename")
+
         local basename_no_ext
         basename_no_ext=$(get_basename_no_ext "$filename")
 
-        local new_name=""
-        local category=""
-
-        # Try Gemini classification (within API call budget)
-        if [[ -n "${GEMINI_API_KEY:-}" ]] && [[ $ai_calls -lt $ai_limit ]]; then
-            local result
-            result=$(classify_file "$file" "$filename" "$ext" 2>/dev/null) || true
-
-            if [[ -n "$result" ]]; then
-                new_name=$(echo "$result" | jq -r '.name // empty' 2>/dev/null)
-                category=$(echo "$result" | jq -r '.category // empty' 2>/dev/null)
-                ((ai_calls++)) || true
-            fi
+        # Skip AI for files that already have good names
+        local known_category
+        known_category=$(already_classified "$basename_no_ext") || true
+        if [[ -n "$known_category" ]]; then
+            local target_path
+            target_path=$(get_unique_path "$DOWNLOADS_DIR/$known_category" "$(to_kebab_case "$basename_no_ext")" "$ext")
+            mv "$file" "$target_path" 2>/dev/null && {
+                log "  $filename -> $known_category/"
+                touch "$COUNTERS_DIR/moved_$(date +%s%N)" 2>/dev/null
+            }
+            continue
         fi
 
-        # Validate category from AI
-        case "${category:-}" in
-            Invoices|Images|Documents|Data|Code|Media|Resumes|Misc) ;;
-            *) category="" ;;
+        # AI-classifiable file types: run in parallel
+        case "$ext" in
+            png|jpg|jpeg|webp|gif|heic|pdf|docx|doc|rtf|pptx|ppt|txt|md|csv|json|xlsx|xls)
+                if [[ $ai_calls -lt $ai_limit ]]; then
+                    classify_and_move "$file" &
+                    ((ai_calls++)) || true
+                    ((jobs_running++)) || true
+
+                    # Stagger launches to avoid API rate limit bursts
+                    sleep 0.2
+
+                    if [[ $jobs_running -ge $MAX_PARALLEL ]]; then
+                        wait -n 2>/dev/null || true
+                        ((jobs_running--)) || true
+                    fi
+                    continue
+                fi
+                ;;
         esac
 
-        # Fallback: extension-based categorization
-        if [[ -z "$category" ]]; then
-            category=$(extension_categorize "$ext")
-        fi
-
-        # Clean up AI-generated name
-        if [[ -n "$new_name" ]]; then
-            if [[ "$category" == "Invoices" ]]; then
-                new_name=$(echo "$new_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
-                if [[ ! "$new_name" =~ ^[a-z]+-[a-z]{3}-[0-9]{2}$ ]]; then
-                    log "    Invalid invoice format from AI: $new_name (file: $filename)"
-                    new_name=""
-                fi
-            else
-                new_name=$(to_kebab_case "$new_name" | cut -c1-60)
-            fi
-        fi
-
-        # Fallback: kebab-case the original name
-        if [[ -z "$new_name" ]]; then
-            new_name=$(to_kebab_case "$basename_no_ext")
-        fi
-
-        local target_dir="$DOWNLOADS_DIR/$category"
+        # Non-classifiable files: move immediately with extension-based category
+        local category
+        category=$(extension_categorize "$ext")
+        local new_name
+        new_name=$(to_kebab_case "$basename_no_ext")
         local target_path
-        target_path=$(get_unique_path "$target_dir" "$new_name" "$ext")
-
-        local original_kebab
-        original_kebab=$(to_kebab_case "$basename_no_ext")
+        target_path=$(get_unique_path "$DOWNLOADS_DIR/$category" "$new_name" "$ext")
 
         mv "$file" "$target_path" 2>/dev/null && {
-            if [[ "$new_name" != "$original_kebab" ]]; then
-                log "  $filename -> $category/$(basename "$target_path")"
-                ((renamed++)) || true
-            else
-                log "  $filename -> $category/"
-            fi
-            ((moved++)) || true
+            log "  $filename -> $category/"
+            touch "$COUNTERS_DIR/moved_$(date +%s%N)" 2>/dev/null
         }
     done < <(find "$DOWNLOADS_DIR" -maxdepth 1 -type f -print0 2>/dev/null)
+
+    wait  # Wait for all background classify+move jobs
+
+    local moved renamed
+    moved=$(find "$COUNTERS_DIR" -name 'moved_*' 2>/dev/null | wc -l | tr -d ' ')
+    renamed=$(find "$COUNTERS_DIR" -name 'renamed_*' 2>/dev/null | wc -l | tr -d ' ')
+    rm -rf "$COUNTERS_DIR"
 
     echo "$moved $renamed $ai_calls"
 }

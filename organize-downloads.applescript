@@ -6,5 +6,5 @@ on adding folder items to this_folder after receiving added_items
 	delay 5
 
 	-- Run the organize script
-	do shell script "~/Downloads/.organize/ai-organize.sh true 5"
+	do shell script "~/Downloads/.organize/ai-organize.sh 5"
 end adding folder items to
