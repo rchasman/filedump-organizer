@@ -9,7 +9,7 @@ TRASH_DIR="$HOME/.Trash"
 ORGANIZE_DIR="$DOWNLOADS_DIR/.organize"
 LOG_FILE="$ORGANIZE_DIR/ai-organize.log"
 HASH_FILE="$ORGANIZE_DIR/.hashes"
-GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-flash}"
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-3-flash-preview}"
 GEMINI_API_URL="https://generativelanguage.googleapis.com/v1beta/models"
 
 FOLDERS="Invoices Images Documents Data Code Media Resumes Misc"
