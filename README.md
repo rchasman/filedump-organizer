@@ -32,7 +32,7 @@ AI-powered file organization for macOS. Automatically deduplicates, categorizes,
 - [Ollama](https://ollama.ai) with models:
   - `llama3.2` - text categorization and PDF naming
   - `moondream` - image description
-- `pdftotext` (optional, for PDF renaming): `brew install poppler`
+- [liteparse](https://github.com/run-llama/liteparse) (for PDF/document text extraction): `brew tap run-llama/liteparse && brew install llamaindex-liteparse`
 
 ## Usage
 

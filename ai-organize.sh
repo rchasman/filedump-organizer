@@ -398,15 +398,17 @@ ai_rename_pdf() {
     filename=$(basename "$filepath")
     local basename_no_ext="${filename%.pdf}"
 
-    # Need pdftotext
-    if ! command -v pdftotext &>/dev/null; then
+    # Need liteparse (lit) for PDF text extraction
+    if ! command -v lit &>/dev/null; then
+        log "    liteparse not installed (brew install llamaindex-liteparse)"
         return 1
     fi
 
     local text
-    text=$(pdftotext -l 1 "$filepath" - 2>/dev/null | head -150)
+    text=$(lit parse "$filepath" --target-pages "1-2" -q 2>/dev/null | head -150)
 
     if [[ -z "$text" ]]; then
+        log "    No text extracted from: $filename"
         return 1
     fi
 
@@ -517,8 +519,12 @@ ai_rename_document() {
     local text=""
     case "$ext" in
         docx|doc|rtf)
-            # Use textutil on macOS to extract text
-            if command -v textutil &>/dev/null; then
+            # Use liteparse for office docs (supports docx, doc, rtf via LibreOffice)
+            if command -v lit &>/dev/null; then
+                text=$(lit parse "$filepath" --target-pages "1-2" --no-ocr -q 2>/dev/null | head -100)
+            fi
+            # Fallback to textutil on macOS
+            if [[ -z "$text" ]] && command -v textutil &>/dev/null; then
                 text=$(textutil -convert txt -stdout "$filepath" 2>/dev/null | head -100)
             fi
             ;;
