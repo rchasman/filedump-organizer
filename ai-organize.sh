@@ -9,10 +9,11 @@ TRASH_DIR="$HOME/.Trash"
 ORGANIZE_DIR="$DOWNLOADS_DIR/.organize"
 LOG_FILE="$ORGANIZE_DIR/ai-organize.log"
 HASH_FILE="$ORGANIZE_DIR/.hashes"
-GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.1-flash-lite-preview}"
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-flash}"
 GEMINI_API_URL="https://generativelanguage.googleapis.com/v1beta/models"
 
 FOLDERS="Invoices Images Documents Data Code Media Resumes Misc"
+INVOICE_NAME_RE='^[a-z]+(-[a-z]+)*-[0-9]{2}-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-[0-9]{2}$'
 
 # Source API key from .env if not in environment
 if [[ -z "${GEMINI_API_KEY:-}" ]] && [[ -f "$ORGANIZE_DIR/.env" ]]; then
@@ -176,14 +177,24 @@ extract_content() {
 
 CLASSIFY_PROMPT='Classify and name this file.
 
-Categories: Invoices (receipts/bills/statements), Images, Documents, Data (spreadsheets/CSV/JSON), Code (installers/packages/archives), Media, Resumes, Misc
+Categories (pick the MOST SPECIFIC match):
+- Invoices: anything requesting/confirming payment — invoices, receipts, bills, statements, payment confirmations, subscription charges, tax payments. Look for: dollar amounts, "total", "amount due", "paid", "receipt", "invoice #", vendor/merchant name, transaction IDs. If it has a charge amount and a vendor, it is an Invoice even if it also looks like a document.
+- Resumes: CVs, resumes, career summaries. Look for: work experience, education, skills sections, job titles.
+- Data: spreadsheets, CSV, JSON data files, datasets, exports.
+- Code: installers, packages, archives, license files, executables.
+- Media: video, audio files.
+- Images: photos, screenshots, graphics, icons, illustrations.
+- Documents: contracts, reports, proposals, guides, letters, forms, presentations — anything text-heavy that is NOT an invoice or resume.
+- Misc: only if nothing else fits.
 
-Naming:
-- Invoices: vendor-dd-mon-yy (e.g., stripe-15-dec-24, aws-01-jul-25)
-  Short vendor name. Issue date only, not due date.
-  Tricky: Amazon Web Services->aws, Google Cloud->google, Digital Ocean->digitalocean
+Priority: Invoices > Resumes > Data > Documents (when ambiguous between these)
+
+Naming rules:
+- Invoices: vendor-dd-mon-yy (e.g., stripe-15-dec-24, aws-01-jul-25, san-diego-county-08-mar-24)
+  Use the shortest recognizable vendor name (1-3 words). Issue/payment date only, not due date.
+  Examples: Amazon Web Services->aws, Google Cloud->google, Digital Ocean->digitalocean, Meat District->meat-district, HR Block->hr-block
 - Resumes: firstname-lastname-role-resume (role: 1-3 words)
-- Other: descriptive-kebab-case, 3-6 words'
+- Other: descriptive-kebab-case, 3-6 words, capturing the document subject'
 
 # Call Gemini with structured JSON output
 # Returns JSON: {"name": "...", "category": "..."}
@@ -239,7 +250,7 @@ gemini_request() {
     fi
 
     local response
-    response=$(curl -s --max-time 15 \
+    response=$(curl -s --max-time 30 \
         "$GEMINI_API_URL/$GEMINI_MODEL:generateContent?key=$GEMINI_API_KEY" \
         -H "Content-Type: application/json" \
         -d @"$tmp_request" 2>/dev/null)
@@ -306,8 +317,8 @@ already_classified() {
     local name="$1"
     local name_lower
     name_lower=$(echo "$name" | tr '[:upper:]' '[:lower:]')
-    # Invoice: vendor-dd-mon-yy or vendor-mon-yy (with optional -N dedup suffix)
-    if [[ "$name_lower" =~ ^[a-z]+-([0-9]{2}-)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-[0-9]{2}(-[0-9]+)?$ ]]; then
+    # Invoice: vendor-dd-mon-yy with optional -N dedup suffix
+    if [[ "$name_lower" =~ ${INVOICE_NAME_RE%$}(-[0-9]+)?$ ]]; then
         echo "Invoices"
         return 0
     fi
@@ -352,14 +363,23 @@ classify_and_move() {
 
     if [[ -z "$category" ]]; then
         log "    AI failed after $attempt attempts: $filename"
-        category=$(extension_categorize "$ext")
+        # Filename heuristic before falling back to extension
+        local name_lower
+        name_lower=$(echo "$filename" | tr '[:upper:]' '[:lower:]')
+        if [[ "$name_lower" =~ invoice|receipt|payment ]]; then
+            category="Invoices"
+        elif [[ "$name_lower" =~ resume|cv|curriculum ]]; then
+            category="Resumes"
+        else
+            category=$(extension_categorize "$ext")
+        fi
     fi
 
     # Clean up AI-generated name
     if [[ -n "$new_name" ]]; then
         if [[ "$category" == "Invoices" ]]; then
             new_name=$(echo "$new_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
-            if [[ ! "$new_name" =~ ^[a-z]+-[0-9]{2}-[a-z]{3}-[0-9]{2}$ ]]; then
+            if [[ ! "$new_name" =~ $INVOICE_NAME_RE ]]; then
                 log "    Invalid invoice format from AI: $new_name (file: $filename)"
                 new_name=""
             fi
@@ -518,18 +538,10 @@ extract_zips() {
             [[ "$extracted_filename" == .* ]] && continue
             [[ "$extracted_filename" == "__MACOSX" ]] && continue
 
-            local target="$DOWNLOADS_DIR/$extracted_filename"
-            local counter=2
-            while [[ -e "$target" ]]; do
-                local base="${extracted_filename%.*}"
-                local ext="${extracted_filename##*.}"
-                if [[ "$base" == "$ext" ]]; then
-                    target="$DOWNLOADS_DIR/${extracted_filename}-${counter}"
-                else
-                    target="$DOWNLOADS_DIR/${base}-${counter}.${ext}"
-                fi
-                ((counter++))
-            done
+            local base ext target
+            base=$(get_basename_no_ext "$extracted_filename")
+            ext=$(get_extension "$extracted_filename")
+            target=$(get_unique_path "$DOWNLOADS_DIR" "$base" "$ext")
 
             mv "$file" "$target" 2>/dev/null && ((file_count++)) || true
         done < <(find "$extract_dir" -type f -print0 2>/dev/null)
