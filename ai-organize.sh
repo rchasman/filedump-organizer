@@ -21,6 +21,15 @@ if [[ -z "${GEMINI_API_KEY:-}" ]] && [[ -f "$ORGANIZE_DIR/.env" ]]; then
 fi
 export GEMINI_API_KEY
 
+MAX_PDF_INLINE=$((10 * 1024 * 1024))  # 10MB cap for inline PDF vision
+LOCKFILE="$ORGANIZE_DIR/.lock"
+
+# Prevent concurrent runs (Folder Actions can fire multiple times)
+if ! mkdir "$LOCKFILE" 2>/dev/null; then
+    exit 0
+fi
+trap 'rmdir "$LOCKFILE" 2>/dev/null' EXIT
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
 }
@@ -279,7 +288,34 @@ Describe what you see and generate an appropriate filename."
 
             gemini_request "$prompt" "$filepath" "$mime_type"
             ;;
-        pdf|docx|doc|rtf|pptx|ppt|txt|md|csv|json|xlsx|xls)
+        pdf)
+            local file_size
+            file_size=$(stat -f '%z' "$filepath" 2>/dev/null || echo 0)
+
+            if [[ $file_size -le $MAX_PDF_INLINE ]]; then
+                local prompt
+                prompt="$CLASSIFY_PROMPT
+
+Current filename: $filename"
+
+                gemini_request "$prompt" "$filepath" "application/pdf"
+            else
+                local content
+                content=$(extract_content "$filepath" "$ext")
+                [[ -z "$content" ]] && return 1
+
+                local prompt
+                prompt="$CLASSIFY_PROMPT
+
+Current filename: $filename
+
+File content:
+$content"
+
+                gemini_request "$prompt"
+            fi
+            ;;
+        docx|doc|rtf|pptx|ppt|txt|md|csv|json|xlsx|xls)
             local content
             content=$(extract_content "$filepath" "$ext")
 
@@ -287,7 +323,6 @@ Describe what you see and generate an appropriate filename."
                 return 1
             fi
 
-            # jq --arg in gemini_request handles all JSON escaping
             local prompt
             prompt="$CLASSIFY_PROMPT
 
