@@ -7,7 +7,7 @@ on adding folder items to this_folder after receiving added_items
 	-- Wait 5 seconds to allow downloads to complete
 	delay 5
 
-	-- Heuristics/fast moves always run; this limit is Gemini budget for ambiguous leftovers.
-	-- Bulk dumps: run manually with a higher limit, e.g. ./ai-organize.sh 50
-	do shell script "~/Downloads/.organize/ai-organize.sh 15"
+	-- Thin Bun CLI: anydoc → gateway (nova-2-lite) → dedupe → move
+	-- Budget = max gateway classify calls for this Folder Action run
+	do shell script "export PATH=\"/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$HOME/.bun/bin:$PATH\"; cd \"$HOME/Downloads/.organize\" && bun run organize 15"
 end adding folder items to

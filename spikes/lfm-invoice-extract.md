@@ -77,3 +77,27 @@ Global CLI package: `@firecrawl/anydoc` (see https://github.com/firecrawl/anydoc
 - `llama3.2` is a stand-in, not LFM2.5: first attempt returned bill-to + bad date
   (`levonsangels-appmakerexternal-jan-2026`); prompt tightened to prefer merchant + `dd-mon-yy`.
 - For production-quality extract, pull Liquid LFM2.5 Extract (GGUF / LEAP) when available.
+
+## Installed model (2026-09-05)
+
+```bash
+ollama pull LiquidAI/lfm2.5-350m:q4_k_m
+```
+
+- Size ~229 MB; Liquid recommends it for data extraction / structured output.
+- Organizer auto-detects any `lfm|liquid` tag; prefers `lfm2.5-350m` when present.
+- Uses Ollama HTTP `/api/generate` with `format=json` and `temperature=0` (falls back to `ollama run`).
+- VL Extract (`LFM2.5-VL-*-Extract`) is separate — better for scanned image receipts; not required for text PDFs once anydoc/lit has extracted Markdown.
+
+### Dry-run
+
+```bash
+DRY_RUN=1 USE_LFM_EXTRACT=1 ./ai-organize.sh 0
+# or pin explicitly:
+DRY_RUN=1 USE_LFM_EXTRACT=1 LFM_OLLAMA_MODEL=LiquidAI/lfm2.5-350m:q4_k_m ./ai-organize.sh 0
+```
+
+## Prompt-only path (chosen)
+
+Default Ollama model: `LiquidAI/lfm2.5-1.2b-instruct:q4_k_m`.
+No receipt regex / vendor keyword table — model must return the schema; bash only normalizes month/year/slug formatting.

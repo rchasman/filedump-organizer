@@ -1,0 +1,20 @@
+{
+  "lean-current": {
+    "exact": 5,
+    "vendor": 6,
+    "valid": 10,
+    "n": 10
+  },
+  "rich-discard": {
+    "exact": 3,
+    "vendor": 4,
+    "valid": 9,
+    "n": 10
+  },
+  "rich-but-use-dmy": {
+    "exact": 3,
+    "vendor": 4,
+    "valid": 9,
+    "n": 10
+  }
+}

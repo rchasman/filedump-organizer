@@ -8,3 +8,9 @@
 .lock/
 .gemini_req_*
 eng.traineddata
+.env.gateway
+node_modules/
+
+# bench noise
+spikes/bench-results/*.log
+spikes/bench-results/**/*.log

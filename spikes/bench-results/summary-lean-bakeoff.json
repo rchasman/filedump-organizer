@@ -1,0 +1,275 @@
+{
+  "ranked": [
+    {
+      "model": "meta/llama-4-scout",
+      "source": "gateway",
+      "exact": 8,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 664,
+      "n": 10,
+      "misses": [
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfortsuites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "mistral/mistral-small",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 9,
+      "valid_format": 10,
+      "avg_ms": 861,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-24 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 9,
+      "valid_format": 10,
+      "avg_ms": 1230,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-00 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "llama3.2:latest",
+      "source": "local",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 10,
+      "avg_ms": 1214,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-01-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-22 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-at-sabino-canyon-08-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "openai/gpt-4o-mini",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 10,
+      "avg_ms": 1742,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-23 expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "spacexai/grok-4.1-fast-non-reasoning",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 857,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "gemma4:latest",
+      "source": "local",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 2013,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "gemma2:9b",
+      "source": "local",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 2348,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-05-may-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "google/gemini-2.5-flash",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 3076,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "google/gemini-2.5-flash-lite",
+      "source": "gateway",
+      "exact": 6,
+      "vendor_ok": 7,
+      "valid_format": 10,
+      "avg_ms": 1028,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=bossabowls-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-23 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-at-sabino-canyon-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "openai/gpt-4o",
+      "source": "gateway",
+      "exact": 6,
+      "vendor_ok": 7,
+      "valid_format": 10,
+      "avg_ms": 1385,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee-01-jan-23 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-25-may-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "alibaba/qwen3.5-flash",
+      "source": "gateway",
+      "exact": 6,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 16340,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=hugging-face-01-aug-26 expected=huggingface-01-aug-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "mistral:latest",
+      "source": "local",
+      "exact": 6,
+      "vendor_ok": 6,
+      "valid_format": 10,
+      "avg_ms": 1837,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=googlecloud-01-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee-01-jan-22 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=stayatchoice-05-may-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "gemini-2.5-flash (direct)",
+      "source": "gemini",
+      "exact": 6,
+      "vendor_ok": 6,
+      "valid_format": 9,
+      "avg_ms": 3109,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "linear-27-aug-26: got=linear-orbit-27-aug-26 expected=linear-27-aug-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "deepseek-coder:latest",
+      "source": "local",
+      "exact": 5,
+      "vendor_ok": 7,
+      "valid_format": 10,
+      "avg_ms": 641,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=github-01-aug-26 expected=huggingface-01-aug-26",
+        "linear-27-aug-26: got=linear-28-aug-26 expected=linear-27-aug-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-22 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=github-31-dec-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "LiquidAI/lfm2.5-1.2b-instruct:q4_k_m",
+      "source": "local",
+      "exact": 5,
+      "vendor_ok": 6,
+      "valid_format": 10,
+      "avg_ms": 171,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=github-01-jun-26 expected=google-30-jun-26",
+        "neon-01-sep-26: got=github-01-sep-26 expected=neon-01-sep-26",
+        "vercel-04-aug-26: got=vercel-08-aug-26 expected=vercel-04-aug-26",
+        "woolworths-01-jun-25: got=woolworths-group-01-jan-24 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=hugging-face-05-may-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "google/gemini-2.5-pro",
+      "source": "gateway",
+      "exact": 5,
+      "vendor_ok": 6,
+      "valid_format": 9,
+      "avg_ms": 4353,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=hugging-face-01-aug-26 expected=huggingface-01-aug-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "LiquidAI/lfm2.5-350m:q4_k_m",
+      "source": "local",
+      "exact": 0,
+      "vendor_ok": 0,
+      "valid_format": 4,
+      "avg_ms": 221,
+      "n": 10,
+      "misses": [
+        "github-21-jul-26: got=github-131-may- expected=github-21-jul-26",
+        "google-30-jun-26: got=google-cloud-131-six- expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=hugging-face-131-se- expected=huggingface-01-aug-26",
+        "inngest-01-sep-26: got=american-express-09-sep-26 expected=inngest-01-sep-26",
+        "linear-27-aug-26: got=linear-business-27-aug-26 expected=linear-27-aug-26",
+        "neon-01-sep-26: got=huggingface-131-se- expected=neon-01-sep-26",
+        "vercel-04-aug-26: got=vercel-131-aug- expected=vercel-04-aug-26",
+        "uber-eats-18-jun-26: got=ahmed-10-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=giftcardswoolworthscomau-131-may- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=american-express-02-feb-26 expected=comfort-suites-03-aug-26"
+      ]
+    }
+  ],
+  "winner_criteria": "highest exact/10; tie-break vendor_ok, valid_format, latency, local-preferred",
+  "winner": "gateway:meta/llama-4-scout (8/10 exact)"
+}

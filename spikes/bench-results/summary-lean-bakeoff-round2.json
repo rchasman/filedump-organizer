@@ -1,0 +1,362 @@
+{
+  "round": 2,
+  "ranked": [
+    {
+      "model": "amazon/nova-2-lite",
+      "source": "gateway",
+      "exact": 8,
+      "vendor_ok": 9,
+      "valid_format": 10,
+      "avg_ms": 856,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-01-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-24 expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "meta/llama-4-scout",
+      "source": "gateway",
+      "exact": 8,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 743,
+      "n": 10,
+      "misses": [
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfortsuites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "zai/glm-5.3-flash",
+      "source": "gateway",
+      "exact": 8,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 1419,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "zai/glm-5.3-fast",
+      "source": "gateway",
+      "exact": 8,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 1576,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "moonshotai/kimi-k2.5",
+      "source": "gateway",
+      "exact": 8,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 2183,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "zai/glm-4.7-flash",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 9,
+      "valid_format": 10,
+      "avg_ms": 735,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-24 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "alibaba/qwen3.8-flash",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 9,
+      "valid_format": 10,
+      "avg_ms": 10276,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=woolworths-01-jan-70 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "meta/llama-4-maverick",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 10,
+      "avg_ms": 623,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=prezzee-01-jan-24 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-25-may-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "moonshotai/kimi-k3",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 2825,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-17-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "google/gemini-3-flash",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 8,
+      "valid_format": 9,
+      "avg_ms": 15799,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "google/gemini-3.5-flash-lite",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 966,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "moonshotai/kimi-k3-fast",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 1841,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "google/gemini-3.5-flash",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 3141,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 16603,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=bossabowls-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25"
+      ]
+    },
+    {
+      "model": "alibaba/qwen3.5-plus",
+      "source": "gateway",
+      "exact": 7,
+      "vendor_ok": 7,
+      "valid_format": 8,
+      "avg_ms": 64003,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "woolworths-01-jun-25: got=--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=--- expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "google/gemini-3.1-flash-lite",
+      "source": "gateway",
+      "exact": 6,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 1146,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "openai/gpt-5-mini",
+      "source": "gateway",
+      "exact": 6,
+      "vendor_ok": 7,
+      "valid_format": 9,
+      "avg_ms": 3771,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "linear-27-aug-26: got=linear-orbit-27-aug-26 expected=linear-27-aug-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-17-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "alibaba/qwen3.7-flash",
+      "source": "gateway",
+      "exact": 5,
+      "vendor_ok": 6,
+      "valid_format": 10,
+      "avg_ms": 11107,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=hugging-face-01-aug-26 expected=huggingface-01-aug-26",
+        "uber-eats-18-jun-26: got=uber-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=prezzee-01-jan-00 expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-18-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "openai/gpt-4.1-mini",
+      "source": "gateway",
+      "exact": 5,
+      "vendor_ok": 6,
+      "valid_format": 9,
+      "avg_ms": 1688,
+      "n": 10,
+      "misses": [
+        "google-30-jun-26: got=google-cloud-30-jun-26 expected=google-30-jun-26",
+        "linear-27-aug-26: got=linear-orbit-27-aug-26 expected=linear-27-aug-26",
+        "uber-eats-18-jun-26: got=bossabowls-18-jun-26 expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=woolworths--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=comfort-suites-17-jun-26 expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "moonshotai/kimi-k2",
+      "source": "gateway",
+      "exact": 0,
+      "vendor_ok": 0,
+      "valid_format": 0,
+      "avg_ms": 306,
+      "n": 10,
+      "misses": [
+        "github-21-jul-26: got=--- expected=github-21-jul-26",
+        "google-30-jun-26: got=--- expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=--- expected=huggingface-01-aug-26",
+        "inngest-01-sep-26: got=--- expected=inngest-01-sep-26",
+        "linear-27-aug-26: got=--- expected=linear-27-aug-26",
+        "neon-01-sep-26: got=--- expected=neon-01-sep-26",
+        "vercel-04-aug-26: got=--- expected=vercel-04-aug-26",
+        "uber-eats-18-jun-26: got=--- expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=--- expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "alibaba/qwen3.8-flash-next",
+      "source": "gateway",
+      "exact": 0,
+      "vendor_ok": 0,
+      "valid_format": 0,
+      "avg_ms": 338,
+      "n": 10,
+      "misses": [
+        "github-21-jul-26: got=--- expected=github-21-jul-26",
+        "google-30-jun-26: got=--- expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=--- expected=huggingface-01-aug-26",
+        "inngest-01-sep-26: got=--- expected=inngest-01-sep-26",
+        "linear-27-aug-26: got=--- expected=linear-27-aug-26",
+        "neon-01-sep-26: got=--- expected=neon-01-sep-26",
+        "vercel-04-aug-26: got=--- expected=vercel-04-aug-26",
+        "uber-eats-18-jun-26: got=--- expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=--- expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "zai/glm-4.5-air",
+      "source": "gateway",
+      "exact": 0,
+      "vendor_ok": 0,
+      "valid_format": 0,
+      "avg_ms": 351,
+      "n": 10,
+      "misses": [
+        "github-21-jul-26: got=--- expected=github-21-jul-26",
+        "google-30-jun-26: got=--- expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=--- expected=huggingface-01-aug-26",
+        "inngest-01-sep-26: got=--- expected=inngest-01-sep-26",
+        "linear-27-aug-26: got=--- expected=linear-27-aug-26",
+        "neon-01-sep-26: got=--- expected=neon-01-sep-26",
+        "vercel-04-aug-26: got=--- expected=vercel-04-aug-26",
+        "uber-eats-18-jun-26: got=--- expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=--- expected=comfort-suites-03-aug-26"
+      ]
+    },
+    {
+      "model": "stepfun/step-3.5-flash",
+      "source": "gateway",
+      "exact": 0,
+      "vendor_ok": 0,
+      "valid_format": 0,
+      "avg_ms": 493,
+      "n": 10,
+      "misses": [
+        "github-21-jul-26: got=--- expected=github-21-jul-26",
+        "google-30-jun-26: got=--- expected=google-30-jun-26",
+        "huggingface-01-aug-26: got=--- expected=huggingface-01-aug-26",
+        "inngest-01-sep-26: got=--- expected=inngest-01-sep-26",
+        "linear-27-aug-26: got=--- expected=linear-27-aug-26",
+        "neon-01-sep-26: got=--- expected=neon-01-sep-26",
+        "vercel-04-aug-26: got=--- expected=vercel-04-aug-26",
+        "uber-eats-18-jun-26: got=--- expected=uber-eats-18-jun-26",
+        "woolworths-01-jun-25: got=--- expected=woolworths-01-jun-25",
+        "comfort-suites-03-aug-26: got=--- expected=comfort-suites-03-aug-26"
+      ]
+    }
+  ],
+  "winner_criteria": "highest exact/10; tie-break vendor_ok, valid_format, latency",
+  "round1_winner": "meta/llama-4-scout (8/10)",
+  "beats_scout": false,
+  "winner": "gateway:amazon/nova-2-lite (8/10 exact)",
+  "best_new_exact": 8,
+  "ties_scout": true
+}
