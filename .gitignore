@@ -1,4 +1,10 @@
+.env
 *.log
 *.log.old
+.last_request.json
 .hashes
 .extract_tmp/
+.counters/
+.lock/
+.gemini_req_*
+eng.traineddata
