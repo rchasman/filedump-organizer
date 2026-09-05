@@ -139,16 +139,65 @@ function normalizeVendorSlug(name: string, category: Category): string {
   return `${vendor}-${m[2]}-${m[3]}-${m[4]}`;
 }
 
-/** One gateway chat/completions call → {category, name}. */
-export async function classifyWithGateway(
+export type ClassifyOpts = {
+  model?: string;
+  apiKey?: string;
+  filename?: string;
+  /** Optional page-1 PNG path for multimodal classify (OpenAI-style image_url). */
+  imagePath?: string;
+};
+
+async function fileToDataUrl(imagePath: string): Promise<string> {
+  const buf = await readFile(imagePath);
+  const b64 = buf.toString("base64");
+  const lower = imagePath.toLowerCase();
+  const mime = lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+    ? "image/jpeg"
+    : "image/png";
+  return `data:${mime};base64,${b64}`;
+}
+
+function buildUserContent(
   text: string,
-  opts?: { model?: string; apiKey?: string; filename?: string },
-): Promise<ClassifyResult> {
-  const apiKey = opts?.apiKey ?? (await loadGatewayApiKey());
-  if (!apiKey) {
-    throw new Error("AI_GATEWAY_API_KEY missing (.env.gateway or env)");
-  }
-  const model = opts?.model ?? GATEWAY_MODEL;
+  filename: string,
+  dataUrl?: string,
+): string | Array<{ type: string; text?: string; image_url?: { url: string } }> {
+  let promptText =
+    CLASSIFY_PROMPT.replace("__FILENAME__", filename) + text.slice(0, TEXT_CAP);
+  if (!dataUrl) return promptText;
+  // Vision peek: same classify rules; image is page 1 for date/vendor disambiguation.
+  promptText +=
+    "\n\nPAGE IMAGE: page 1 of the PDF is attached. Prefer dates/vendor visible " +
+    "in the image when text is ambiguous.\n" +
+    "- Hotel/US folios: header field labeled Date uses M/D/YY (e.g. 8/3/26 = 03-aug-26). " +
+    "NEVER Arrival Date or Departure Date.\n" +
+    "- Gift card / Prezzee / eGift with no Date paid / Payment date / Order completed " +
+    "visible in text or image → category Documents + short kebab (e.g. woolworths-egift). " +
+    "Do NOT invent a paid date.\n" +
+    "- Invoice name months MUST be jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec " +
+    "(never numeric months like 08-03).\n";
+  return [
+    { type: "text", text: promptText },
+    { type: "image_url", image_url: { url: dataUrl } },
+  ];
+}
+
+function parseClassifyResponse(raw: string): ClassifyResult {
+  const obj = parseJsonLoose(raw);
+  const categoryRaw = String(obj.category ?? "Misc");
+  const category: Category = isCategory(categoryRaw) ? categoryRaw : "Misc";
+  let name = sanitizeName(String(obj.name ?? "untitled")) || "untitled";
+  name = normalizeVendorSlug(name, category);
+  return { category, name };
+}
+
+async function gatewayChat(
+  apiKey: string,
+  model: string,
+  userContent:
+    | string
+    | Array<{ type: string; text?: string; image_url?: { url: string } }>,
+): Promise<string> {
   const body = {
     model,
     temperature: 0,
@@ -161,9 +210,7 @@ export async function classifyWithGateway(
       },
       {
         role: "user",
-        content:
-          CLASSIFY_PROMPT.replace("__FILENAME__", opts?.filename ?? "(unknown)") +
-          text.slice(0, TEXT_CAP),
+        content: userContent,
       },
     ],
   };
@@ -185,13 +232,35 @@ export async function classifyWithGateway(
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
-  const raw = data.choices?.[0]?.message?.content ?? "{}";
-  const obj = parseJsonLoose(raw);
+  return data.choices?.[0]?.message?.content ?? "{}";
+}
 
-  const categoryRaw = String(obj.category ?? "Misc");
-  const category: Category = isCategory(categoryRaw) ? categoryRaw : "Misc";
-  let name = sanitizeName(String(obj.name ?? "untitled")) || "untitled";
-  name = normalizeVendorSlug(name, category);
+/** One gateway chat/completions call → {category, name}. Optional imagePath for vision peek. */
+export async function classifyWithGateway(
+  text: string,
+  opts?: ClassifyOpts,
+): Promise<ClassifyResult> {
+  const apiKey = opts?.apiKey ?? (await loadGatewayApiKey());
+  if (!apiKey) {
+    throw new Error("AI_GATEWAY_API_KEY missing (.env.gateway or env)");
+  }
+  const model = opts?.model ?? GATEWAY_MODEL;
+  const filename = opts?.filename ?? "(unknown)";
+  const textOnlyContent = buildUserContent(text, filename);
 
-  return { category, name };
+  if (opts?.imagePath && existsSync(opts.imagePath)) {
+    try {
+      const dataUrl = await fileToDataUrl(opts.imagePath);
+      const visionContent = buildUserContent(text, filename, dataUrl);
+      const raw = await gatewayChat(apiKey, model, visionContent);
+      return parseClassifyResponse(raw);
+    } catch {
+      // Vision rejected / failed — fall back to text-only (do not crash)
+      const raw = await gatewayChat(apiKey, model, textOnlyContent);
+      return parseClassifyResponse(raw);
+    }
+  }
+
+  const raw = await gatewayChat(apiKey, model, textOnlyContent);
+  return parseClassifyResponse(raw);
 }

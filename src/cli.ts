@@ -4,7 +4,7 @@
  * Flow: scan top-level → hash dedupe → anydoc extract → one gateway call → move.
  */
 import { readdir } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename, extname, join } from "node:path";
 import {
   DOWNLOADS_DIR,
   GATEWAY_MODEL,
@@ -19,6 +19,12 @@ import {
   log,
   moveClassified,
 } from "./move.ts";
+import {
+  cleanupTempImage,
+  needsVision,
+  refineHotelFolioResult,
+  renderPdfPage1,
+} from "./vision.ts";
 
 function parseArgs(argv: string[]): { dryRun: boolean; limit: number; help: boolean } {
   let dryRun = process.env.DRY_RUN === "1";
@@ -115,9 +121,24 @@ Env:
       continue;
     }
 
+    let imagePath: string | null = null;
     try {
       const text = await extractText(filepath);
-      const result = await classifyWithGateway(text, { apiKey, filename });
+      const isPdf = extname(filepath).toLowerCase() === ".pdf";
+      if (isPdf && needsVision(text)) {
+        imagePath = await renderPdfPage1(filepath);
+        if (imagePath) {
+          await log(`Vision peek for ${filename}`, dryRun);
+        }
+      }
+      let result = await classifyWithGateway(text, {
+        apiKey,
+        filename,
+        imagePath: imagePath ?? undefined,
+      });
+      if (imagePath) {
+        result = refineHotelFolioResult(text, result);
+      }
       calls++;
       await log(
         `Classified ${filename} → ${result.category}/${result.name} (call ${calls}/${limit})`,
@@ -135,6 +156,8 @@ Env:
       const msg = err instanceof Error ? err.message : String(err);
       await log(`Gateway failed for ${filename}: ${msg}; leaving alone`, dryRun);
       skipped++;
+    } finally {
+      await cleanupTempImage(imagePath);
     }
   }
 
