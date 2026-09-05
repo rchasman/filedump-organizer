@@ -297,8 +297,16 @@ export async function classifyWithGateway(
       const pdfContent = buildUserContent(text, filename, { pdfFilePart });
       const raw = await gatewayChat(apiKey, model, pdfContent);
       return parseClassifyResponse(raw);
-    } catch {
-      // Native PDF rejected / failed — fall through to image / text
+    } catch (err) {
+      // If caller already supplied a PNG, fall through to image. Otherwise signal
+      // so CLI can lazy-render pdftoppm only after native PDF fails.
+      const hasImage = !!(opts?.imagePath && existsSync(opts.imagePath));
+      if (!hasImage) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const e = new Error(`NATIVE_PDF_FAILED: ${msg}`);
+        (e as Error & { code?: string }).code = "NATIVE_PDF_FAILED";
+        throw e;
+      }
     }
   }
 

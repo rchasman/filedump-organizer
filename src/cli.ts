@@ -125,25 +125,39 @@ Env:
     try {
       const text = await extractText(filepath);
       const isPdf = extname(filepath).toLowerCase() === ".pdf";
-      let pdfPath: string | undefined;
-      if (isPdf && needsVision(text)) {
-        // Prefer native whole-PDF document part; keep page-1 PNG as fallback.
-        pdfPath = filepath;
-        imagePath = await renderPdfPage1(filepath);
-        if (imagePath) {
-          await log(`Vision peek for ${filename} (native PDF preferred)`, dryRun);
-        } else {
-          await log(`Native PDF classify for ${filename} (no PNG fallback)`, dryRun);
+      const wantVision = isPdf && needsVision(text);
+      let result;
+
+      if (wantVision) {
+        await log(`Native PDF classify for ${filename}`, dryRun);
+        try {
+          result = await classifyWithGateway(text, {
+            apiKey,
+            filename,
+            pdfPath: filepath,
+          });
+        } catch (err) {
+          const code = (err as Error & { code?: string }).code;
+          const msg = err instanceof Error ? err.message : String(err);
+          const nativeFailed =
+            code === "NATIVE_PDF_FAILED" || msg.includes("NATIVE_PDF_FAILED");
+          if (!nativeFailed) throw err;
+
+          await log(
+            `Native PDF failed for ${filename}; rendering page-1 PNG`,
+            dryRun,
+          );
+          imagePath = await renderPdfPage1(filepath);
+          if (!imagePath) throw err;
+          result = await classifyWithGateway(text, {
+            apiKey,
+            filename,
+            imagePath,
+          });
         }
-      }
-      let result = await classifyWithGateway(text, {
-        apiKey,
-        filename,
-        pdfPath,
-        imagePath: imagePath ?? undefined,
-      });
-      if (pdfPath || imagePath) {
         result = refineHotelFolioResult(text, result);
+      } else {
+        result = await classifyWithGateway(text, { apiKey, filename });
       }
       calls++;
       await log(
