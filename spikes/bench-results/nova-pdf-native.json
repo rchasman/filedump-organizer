@@ -1,0 +1,89 @@
+{
+  "model": "amazon/nova-2-lite",
+  "workingVariants": [],
+  "preferredId": null,
+  "rows": [
+    {
+      "sample": "comfort-suites-03-aug-26.pdf",
+      "mode": "text-only",
+      "ms": 1234,
+      "result": "Invoices/comfort-suites-03-aug-26",
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true
+    },
+    {
+      "sample": "comfort-suites-03-aug-26.pdf",
+      "mode": "image-png",
+      "ms": 2711,
+      "result": "Invoices/comfort-suites-03-aug-26",
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true
+    },
+    {
+      "sample": "comfort-suites-03-aug-26.pdf",
+      "mode": "native-pdf",
+      "ms": 0,
+      "result": "SKIP:no-variant",
+      "exact": false,
+      "vendorOk": false,
+      "woolOk": false
+    },
+    {
+      "sample": "woolworths-01-jun-25.pdf",
+      "mode": "text-only",
+      "ms": 651,
+      "result": "Invoices/woolworths-01-jun-25",
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true
+    },
+    {
+      "sample": "woolworths-01-jun-25.pdf",
+      "mode": "image-png",
+      "ms": 2284,
+      "result": "Documents/woolworths-egift",
+      "exact": false,
+      "vendorOk": true,
+      "woolOk": true
+    },
+    {
+      "sample": "woolworths-01-jun-25.pdf",
+      "mode": "native-pdf",
+      "ms": 0,
+      "result": "SKIP:no-variant",
+      "exact": false,
+      "vendorOk": false,
+      "woolOk": false
+    },
+    {
+      "sample": "vercel-04-aug-26.pdf",
+      "mode": "text-only",
+      "ms": 1173,
+      "result": "Invoices/vercel-04-aug-26",
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true
+    },
+    {
+      "sample": "vercel-04-aug-26.pdf",
+      "mode": "image-png",
+      "ms": 2306,
+      "result": "Invoices/vercel-04-aug-26",
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true
+    },
+    {
+      "sample": "vercel-04-aug-26.pdf",
+      "mode": "native-pdf",
+      "ms": 0,
+      "result": "SKIP:no-variant",
+      "exact": false,
+      "vendorOk": false,
+      "woolOk": false
+    }
+  ],
+  "at": "2026-09-05T07:57:39.490Z"
+}

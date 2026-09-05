@@ -145,6 +145,11 @@ export type ClassifyOpts = {
   filename?: string;
   /** Optional page-1 PNG path for multimodal classify (OpenAI-style image_url). */
   imagePath?: string;
+  /**
+   * Optional full PDF path for native document part (Vercel AI Gateway `type: file`).
+   * Preferred over imagePath when both are set; on failure falls back to image then text.
+   */
+  pdfPath?: string;
 };
 
 async function fileToDataUrl(imagePath: string): Promise<string> {
@@ -157,28 +162,64 @@ async function fileToDataUrl(imagePath: string): Promise<string> {
   return `data:${mime};base64,${b64}`;
 }
 
+async function pdfToFilePart(pdfPath: string, filename: string): Promise<{
+  type: "file";
+  file: { filename: string; file_data: string };
+}> {
+  const buf = await readFile(pdfPath);
+  const b64 = buf.toString("base64");
+  return {
+    type: "file",
+    file: {
+      filename: filename.endsWith(".pdf") ? filename : `${filename}.pdf`,
+      file_data: `data:application/pdf;base64,${b64}`,
+    },
+  };
+}
+
+const VISION_DISAMBIG_HINT =
+  "\n" +
+  "- Hotel/US folios: header field labeled Date uses M/D/YY (e.g. 8/3/26 = 03-aug-26). " +
+  "NEVER Arrival Date or Departure Date.\n" +
+  "- Gift card / Prezzee / eGift with no Date paid / Payment date / Order completed " +
+  "visible → category Documents + short kebab (e.g. woolworths-egift). " +
+  "Do NOT invent a paid date.\n" +
+  "- Invoice name months MUST be jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec " +
+  "(never numeric months like 08-03).\n";
+
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+  | {
+      type: "file";
+      file: { filename: string; file_data: string };
+    };
+
 function buildUserContent(
   text: string,
   filename: string,
-  dataUrl?: string,
-): string | Array<{ type: string; text?: string; image_url?: { url: string } }> {
+  opts?: { dataUrl?: string; pdfFilePart?: ContentPart },
+): string | ContentPart[] {
   let promptText =
     CLASSIFY_PROMPT.replace("__FILENAME__", filename) + text.slice(0, TEXT_CAP);
-  if (!dataUrl) return promptText;
+  if (!opts?.dataUrl && !opts?.pdfFilePart) return promptText;
+
+  if (opts.pdfFilePart) {
+    promptText +=
+      "\n\nPDF DOCUMENT: the full PDF is attached as a file part. Prefer dates/vendor " +
+      "visible in the PDF when text is ambiguous.\n" +
+      VISION_DISAMBIG_HINT;
+    return [{ type: "text", text: promptText }, opts.pdfFilePart];
+  }
+
   // Vision peek: same classify rules; image is page 1 for date/vendor disambiguation.
   promptText +=
     "\n\nPAGE IMAGE: page 1 of the PDF is attached. Prefer dates/vendor visible " +
     "in the image when text is ambiguous.\n" +
-    "- Hotel/US folios: header field labeled Date uses M/D/YY (e.g. 8/3/26 = 03-aug-26). " +
-    "NEVER Arrival Date or Departure Date.\n" +
-    "- Gift card / Prezzee / eGift with no Date paid / Payment date / Order completed " +
-    "visible in text or image → category Documents + short kebab (e.g. woolworths-egift). " +
-    "Do NOT invent a paid date.\n" +
-    "- Invoice name months MUST be jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec " +
-    "(never numeric months like 08-03).\n";
+    VISION_DISAMBIG_HINT;
   return [
     { type: "text", text: promptText },
-    { type: "image_url", image_url: { url: dataUrl } },
+    { type: "image_url", image_url: { url: opts.dataUrl! } },
   ];
 }
 
@@ -194,9 +235,7 @@ function parseClassifyResponse(raw: string): ClassifyResult {
 async function gatewayChat(
   apiKey: string,
   model: string,
-  userContent:
-    | string
-    | Array<{ type: string; text?: string; image_url?: { url: string } }>,
+  userContent: string | ContentPart[],
 ): Promise<string> {
   const body = {
     model,
@@ -235,7 +274,10 @@ async function gatewayChat(
   return data.choices?.[0]?.message?.content ?? "{}";
 }
 
-/** One gateway chat/completions call → {category, name}. Optional imagePath for vision peek. */
+/**
+ * One gateway chat/completions call → {category, name}.
+ * Prefer native PDF (pdfPath) when set; then page-1 image (imagePath); then text-only.
+ */
 export async function classifyWithGateway(
   text: string,
   opts?: ClassifyOpts,
@@ -248,10 +290,23 @@ export async function classifyWithGateway(
   const filename = opts?.filename ?? "(unknown)";
   const textOnlyContent = buildUserContent(text, filename);
 
+  // 1) Native whole-PDF document part (Nova / gateway `type: file`)
+  if (opts?.pdfPath && existsSync(opts.pdfPath)) {
+    try {
+      const pdfFilePart = await pdfToFilePart(opts.pdfPath, filename);
+      const pdfContent = buildUserContent(text, filename, { pdfFilePart });
+      const raw = await gatewayChat(apiKey, model, pdfContent);
+      return parseClassifyResponse(raw);
+    } catch {
+      // Native PDF rejected / failed — fall through to image / text
+    }
+  }
+
+  // 2) Page-1 PNG vision peek
   if (opts?.imagePath && existsSync(opts.imagePath)) {
     try {
       const dataUrl = await fileToDataUrl(opts.imagePath);
-      const visionContent = buildUserContent(text, filename, dataUrl);
+      const visionContent = buildUserContent(text, filename, { dataUrl });
       const raw = await gatewayChat(apiKey, model, visionContent);
       return parseClassifyResponse(raw);
     } catch {

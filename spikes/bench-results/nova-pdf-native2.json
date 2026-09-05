@@ -1,0 +1,101 @@
+{
+  "model": "amazon/nova-2-lite",
+  "working": [
+    "file.file_data_dataurl",
+    "file.data_media_type"
+  ],
+  "preferred": "file.file_data_dataurl",
+  "rows": [
+    {
+      "sample": "comfort-suites-03-aug-26.pdf",
+      "mode": "text-only",
+      "ms": 1093,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/comfort-suites-03-aug-26",
+      "result": "Invoices/comfort-suites-03-aug-26"
+    },
+    {
+      "sample": "comfort-suites-03-aug-26.pdf",
+      "mode": "image-png",
+      "ms": 2978,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/comfort-suites-03-aug-26",
+      "result": "Invoices/comfort-suites-03-aug-26"
+    },
+    {
+      "sample": "comfort-suites-03-aug-26.pdf",
+      "mode": "native:file.file_data_dataurl",
+      "ms": 4759,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/comfort-suites-03-aug-26",
+      "result": "Invoices/comfort-suites-03-aug-26"
+    },
+    {
+      "sample": "woolworths-01-jun-25.pdf",
+      "mode": "text-only",
+      "ms": 731,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/woolworths-01-jun-25",
+      "result": "Invoices/woolworths-01-jun-25"
+    },
+    {
+      "sample": "woolworths-01-jun-25.pdf",
+      "mode": "image-png",
+      "ms": 2157,
+      "exact": false,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Documents/woolworths-egift",
+      "result": "Documents/woolworths-egift"
+    },
+    {
+      "sample": "woolworths-01-jun-25.pdf",
+      "mode": "native:file.file_data_dataurl",
+      "ms": 5191,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/woolworths-01-jun-25",
+      "result": "Invoices/woolworths-01-jun-25"
+    },
+    {
+      "sample": "vercel-04-aug-26.pdf",
+      "mode": "text-only",
+      "ms": 1171,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/vercel-04-aug-26",
+      "result": "Invoices/vercel-04-aug-26"
+    },
+    {
+      "sample": "vercel-04-aug-26.pdf",
+      "mode": "image-png",
+      "ms": 1888,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/vercel-04-aug-26",
+      "result": "Invoices/vercel-04-aug-26"
+    },
+    {
+      "sample": "vercel-04-aug-26.pdf",
+      "mode": "native:file.file_data_dataurl",
+      "ms": 2834,
+      "exact": true,
+      "vendorOk": true,
+      "woolOk": true,
+      "label": "Invoices/vercel-04-aug-26",
+      "result": "Invoices/vercel-04-aug-26"
+    }
+  ],
+  "at": "2026-09-05T07:58:51.991Z"
+}

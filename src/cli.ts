@@ -125,18 +125,24 @@ Env:
     try {
       const text = await extractText(filepath);
       const isPdf = extname(filepath).toLowerCase() === ".pdf";
+      let pdfPath: string | undefined;
       if (isPdf && needsVision(text)) {
+        // Prefer native whole-PDF document part; keep page-1 PNG as fallback.
+        pdfPath = filepath;
         imagePath = await renderPdfPage1(filepath);
         if (imagePath) {
-          await log(`Vision peek for ${filename}`, dryRun);
+          await log(`Vision peek for ${filename} (native PDF preferred)`, dryRun);
+        } else {
+          await log(`Native PDF classify for ${filename} (no PNG fallback)`, dryRun);
         }
       }
       let result = await classifyWithGateway(text, {
         apiKey,
         filename,
+        pdfPath,
         imagePath: imagePath ?? undefined,
       });
-      if (imagePath) {
+      if (pdfPath || imagePath) {
         result = refineHotelFolioResult(text, result);
       }
       calls++;
