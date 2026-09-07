@@ -11,7 +11,7 @@ import {
   SKIP_PREFIXES,
   SKIP_SUFFIXES,
 } from "./config.ts";
-import { extractText } from "./extract.ts";
+import { extractText, isPdfEncrypted } from "./extract.ts";
 import { classifyWithGateway, loadGatewayApiKey } from "./gateway.ts";
 import {
   dedupeByHash,
@@ -123,6 +123,15 @@ Env:
 
     let imagePath: string | null = null;
     try {
+      if (await isPdfEncrypted(filepath)) {
+        await log(
+          `Encrypted/password-protected PDF: ${filename}; leaving alone`,
+          dryRun,
+        );
+        skipped++;
+        continue;
+      }
+
       const text = await extractText(filepath);
       const isPdf = extname(filepath).toLowerCase() === ".pdf";
       const wantVision = isPdf && needsVision(text);
