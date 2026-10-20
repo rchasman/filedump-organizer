@@ -48,7 +48,10 @@ Invoices → name MUST be vendor-dd-mon-yy:
 - day 01–31; year exactly 2 digits
 
 Resumes → short kebab, prefer *-resume.
-Other → short descriptive kebab from content; filename is a weak hint only.
+Other (esp. Data, Documents) → descriptive kebab, 3–6 words, capturing the subject.
+- If FILENAME is already descriptive (real subject words), KEEP all its words in order, kebab-cased, including acronyms and version/identifier tokens (v2, sid, 2024); do not shorten, summarize or drop words.
+  e.g. "Quarterly revenue by region.xlsx" → quarterly-revenue-by-region; "Board Meeting Minutes - March.pdf" → board-meeting-minutes-march
+- Only if FILENAME is generic (IMG_1234, download (3), Receipt-1234-5678, document, scan, untitled) → name from content.
 
 FILENAME: __FILENAME__
 
