@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import {
   CATEGORIES,
   GATEWAY_MODEL,
@@ -29,7 +29,7 @@ Categories (pick exactly one):
 - Resumes — CV / resume
 - Misc — only if nothing else fits
 
-NAME rules (lowercase kebab, no extension, ≤60 chars):
+NAME rules (no extension, ≤60 chars). Invoices use lowercase kebab; every other category uses Title Case with spaces:
 
 Invoices → name MUST be vendor-dd-mon-yy:
 - vendor = who ISSUED/CHARGED (header/From/support domain), 1–3 tokens
@@ -43,15 +43,16 @@ Invoices → name MUST be vendor-dd-mon-yy:
   - Prefer: Date paid, Payment date, Order completed, Transaction date, Invoice date
   - Hotel folios: use folio header "Date:" / print/issue date — NEVER Arrival Date or Departure Date
   - Statements: statement period END
-  - NEVER invent a date. No clear paid/issue/folio date → category Documents + short kebab (not vendor-dd-mon-yy)
+  - NEVER invent a date. No clear paid/issue/folio date → category Documents + short Title Case name (not vendor-dd-mon-yy)
 - month MUST be jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec (never digits or full month words in the name)
 - day 01–31; year exactly 2 digits
 
-Resumes → short kebab, prefer *-resume.
-Other (esp. Data, Documents) → descriptive kebab, 3–6 words, capturing the subject.
-- If FILENAME is already descriptive (real subject words), KEEP all its words in order, kebab-cased, including acronyms and version/identifier tokens (v2, sid, 2024); do not shorten, summarize or drop words.
-  e.g. "Quarterly revenue by region.xlsx" → quarterly-revenue-by-region; "Board Meeting Minutes - March.pdf" → board-meeting-minutes-march
-- Only if FILENAME is generic (IMG_1234, download (3), Receipt-1234-5678, document, scan, untitled) → name from content.
+All non-invoice names (Data, Documents, Images, Code, Media, Resumes, Misc) → Title Case words separated by spaces (never kebab-case or underscores).
+- Capitalize each word; keep acronyms and version/identifier tokens exactly as written (SID, V10.6.2, DPA, W9, 2024).
+- If FILENAME is already descriptive (real subject words), KEEP all its words in order, including acronyms and version/identifier tokens; do not shorten, summarize or drop words. Drop separator punctuation like " - " and "_". If it is already nicely cased, keep its casing.
+  e.g. "quarterly_revenue by region.xlsx" → Quarterly Revenue By Region; "Board Meeting Minutes - March v2.pdf" → Board Meeting Minutes March v2
+- Only if FILENAME is generic (IMG_1234, download (3), Receipt-1234-5678, document, scan, untitled) → descriptive 3–6 word Title Case name from content.
+Resumes → Title Case, prefer "Firstname Lastname Resume".
 
 FILENAME: __FILENAME__
 
@@ -108,6 +109,21 @@ function parseJsonLoose(raw: string): Record<string, unknown> {
   }
 }
 
+/** Non-invoice names: keep case/spaces; strip only filename-unsafe chars. */
+function sanitizeTitleName(raw: string, ext: string): string {
+  let name = String(raw || "").trim();
+  if (ext && name.toLowerCase().endsWith(ext.toLowerCase())) {
+    name = name.slice(0, -ext.length);
+  }
+  return name
+    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s.]+|[\s.]+$/g, "")
+    .slice(0, 80)
+    .trim();
+}
+
+/** Invoice names: lowercase kebab vendor-dd-mon-yy. */
 function sanitizeName(raw: string): string {
   return String(raw || "")
     .toLowerCase()
@@ -185,7 +201,7 @@ const VISION_DISAMBIG_HINT =
   "- Hotel/US folios: header field labeled Date uses M/D/YY (e.g. 8/3/26 = 03-aug-26). " +
   "NEVER Arrival Date or Departure Date.\n" +
   "- Gift card / Prezzee / eGift with no Date paid / Payment date / Order completed " +
-  "visible → category Documents + short kebab (e.g. woolworths-egift). " +
+  "visible → category Documents + short Title Case name (e.g. Woolworths eGift). " +
   "Do NOT invent a paid date.\n" +
   "- Invoice name months MUST be jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec " +
   "(never numeric months like 08-03).\n";
@@ -226,12 +242,18 @@ function buildUserContent(
   ];
 }
 
-function parseClassifyResponse(raw: string): ClassifyResult {
+function parseClassifyResponse(raw: string, filename: string): ClassifyResult {
   const obj = parseJsonLoose(raw);
   const categoryRaw = String(obj.category ?? "Misc");
   const category: Category = isCategory(categoryRaw) ? categoryRaw : "Misc";
-  let name = sanitizeName(String(obj.name ?? "untitled")) || "untitled";
-  name = normalizeVendorSlug(name, category);
+  const rawName = String(obj.name ?? "");
+  let name: string;
+  if (category === "Invoices") {
+    name = sanitizeName(rawName || "untitled") || "untitled";
+    name = normalizeVendorSlug(name, category);
+  } else {
+    name = sanitizeTitleName(rawName, extname(filename)) || "Untitled";
+  }
   return { category, name };
 }
 
@@ -299,7 +321,7 @@ export async function classifyWithGateway(
       const pdfFilePart = await pdfToFilePart(opts.pdfPath, filename);
       const pdfContent = buildUserContent(text, filename, { pdfFilePart });
       const raw = await gatewayChat(apiKey, model, pdfContent);
-      return parseClassifyResponse(raw);
+      return parseClassifyResponse(raw, filename);
     } catch (err) {
       // If caller already supplied a PNG, fall through to image. Otherwise signal
       // so CLI can lazy-render pdftoppm only after native PDF fails.
@@ -319,14 +341,14 @@ export async function classifyWithGateway(
       const dataUrl = await fileToDataUrl(opts.imagePath);
       const visionContent = buildUserContent(text, filename, { dataUrl });
       const raw = await gatewayChat(apiKey, model, visionContent);
-      return parseClassifyResponse(raw);
+      return parseClassifyResponse(raw, filename);
     } catch {
       // Vision rejected / failed — fall back to text-only (do not crash)
       const raw = await gatewayChat(apiKey, model, textOnlyContent);
-      return parseClassifyResponse(raw);
+      return parseClassifyResponse(raw, filename);
     }
   }
 
   const raw = await gatewayChat(apiKey, model, textOnlyContent);
-  return parseClassifyResponse(raw);
+  return parseClassifyResponse(raw, filename);
 }

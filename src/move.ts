@@ -60,11 +60,13 @@ export function getUniquePath(dir: string, base: string, ext: string): string {
   let target = join(dir, withExt);
   if (!existsSync(target)) return target;
 
+  // Title Case names ("Some Report") get " 2"; kebab names get "-2".
+  const sep = base.includes(" ") ? " " : "-";
   let counter = 2;
   while (true) {
     const candidate = ext
-      ? join(dir, `${base}-${counter}.${ext}`)
-      : join(dir, `${base}-${counter}`);
+      ? join(dir, `${base}${sep}${counter}.${ext}`)
+      : join(dir, `${base}${sep}${counter}`);
     if (!existsSync(candidate)) return candidate;
     counter++;
   }
